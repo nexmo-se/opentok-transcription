@@ -33,7 +33,8 @@ body:
 {
   "apiKey": API_KEY,
   "sessionId": SESSION_ID,
-  "token": TOKEN
+  "token": TOKEN,
+  "filterEnabled": ENABLED [BOOLEAN]
 }
 ```
 
