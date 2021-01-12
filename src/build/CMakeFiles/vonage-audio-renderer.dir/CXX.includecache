@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../../common/src/otk_thread.h
+pthread.h
+-
+stdio.h
+-
+time.h
+-
+uv.h
+../../common/src/uv.h
+
+/home/admin/opentokSDK/vonage-custom-audio-renderer/src/config.h
+
+/home/admin/opentokSDK/vonage-custom-audio-renderer/src/main.cpp
+opentok.h
+-
+atomic
+-
+cstdlib
+-
+iostream
+-
+signal.h
+-
+fcntl.h
+-
+sys/stat.h
+-
+sys/types.h
+-
+unistd.h
+-
+config.h
+/home/admin/opentokSDK/vonage-custom-audio-renderer/src/config.h
+otk_thread.h
+/home/admin/opentokSDK/vonage-custom-audio-renderer/src/otk_thread.h
+
