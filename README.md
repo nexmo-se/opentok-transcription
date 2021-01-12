@@ -71,6 +71,7 @@ Response
 
 ### SocketIO Join Room
 ```
+direction: sent from client to server
 event: join
 data:
 {
@@ -80,9 +81,17 @@ data:
 
 ### SocketIO Leave Room
 ```
+direction: sent from client to server
 event: leave
 data:
 {
   "room": SESSION_ID
 }
+```
+
+### SocketIO Transcription Text
+```
+direction: sent from server to client
+event: transcription,
+data: TRANSCRIPTION_TEXT (STRING),
 ```
