@@ -14,13 +14,14 @@ Transcription Server using AWS Transcription Streams.
 
 ### Setup (Debian Linux)
 1. clone this repo
-2. install python3: `sudo apt-get install python3.7`
-3. install pip3: `sudo apt-get install python3-pip`
-4. install dependencies: `pip3 install -r requirements.txt`
-5. navigate into build directory: `cd src/build`
-6. build native linux application: `make`
-7. navigate back to source directory: `cd ..`
-8. run python server: `python3.7 server.py`
+2. install native dependencies (for cairo): `sudo apt-get install libcairo2-dev libjpeg-dev libgif-dev`
+3. install python3: `sudo apt-get install python3.7`
+4. install pip3: `sudo apt-get install python3-pip`
+5. install dependencies: `pip3 install -r requirements.txt`
+6. navigate into build directory: `cd src/build`
+7. build native linux application: `make`
+8. navigate back to source directory: `cd ..`
+9. run python server: `python3.7 server.py`
 
 # Using the application
 
