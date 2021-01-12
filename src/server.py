@@ -18,6 +18,7 @@ from pprint import pprint
 import uuid
 import time
 import requests
+from profanity import profanity
 
 # This is the in-memory map of all the native processes
 nativeProcesses = {}
@@ -26,15 +27,27 @@ pythonThreads = {}
 chunkSize = 3200
 sleepTime = 0.05
 
+profanity.set_censor_characters('*')
+
 
 
 class MyEventHandler(TranscriptResultStreamHandler):
     def setSessionId(self, sessionId):
       self.sessionId = sessionId
 
+    def setFilterEnabled(self, filterEnabled):
+      self.filterEnabled = filterEnabled
+
+    def censorText(self, text):
+      if self.filterEnabled is None or not self.filterEnabled:
+        return text
+
+      return profanity.censor(text)
+
     def sendTranscriptionSocket(self, text):
       # print(text)
-      socketio.emit('transcription', text, room=self.sessionId)
+      censorredText = self.censorText(text)
+      socketio.emit('transcription', censorredText, room=self.sessionId)
 
     async def handle_transcript_event(self, transcript_event: TranscriptEvent):
         results = transcript_event.transcript.results
@@ -85,7 +98,7 @@ async def nonstop_write_chunks(stream, fifo):
   await stream.input_stream.end_stream()
   print('Stream ended')
 
-async def nonstop_stream_transcribe(apiKey, sessionId, token):
+async def nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled = False):
   myoutput = open("out.log",'w')
 
   # Create FIFO
@@ -111,6 +124,7 @@ async def nonstop_stream_transcribe(apiKey, sessionId, token):
     stream = await client.start_stream_transcription(language_code = "en-US", media_sample_rate_hz = 16000, media_encoding = "pcm")
     handler = MyEventHandler(stream.output_stream)
     handler.setSessionId(sessionId)
+    handler.setFilterEnabled(filterEnabled)
 
     print("Starting gather")
     await asyncio.gather(nonstop_write_chunks(stream, fifo), handler.handle_events())
@@ -152,10 +166,12 @@ def startTransribe():
   apiKey = data['apiKey']
   sessionId = data['sessionId']
   token = data['token']
+  filterEnabled = data['filterEnabled'] if 'filterEnabled' in data else True
 
   print('API Key:', apiKey)
   print('Session ID:', sessionId)
   print('Token:', token)
+  print('Filter Enabled:', filterEnabled)
 
   if sessionId in nativeProcesses:
     # Existed, should not start
@@ -163,7 +179,7 @@ def startTransribe():
     return jsonify({ "status": "started" })
 
   # Start new process
-  thread = threading.Thread(target=asyncio.run, args=(nonstop_stream_transcribe(apiKey, sessionId, token),))
+  thread = threading.Thread(target=asyncio.run, args=(nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled),))
   thread.start()
   print('Thread started', sessionId)
 
