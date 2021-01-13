@@ -15,13 +15,18 @@ Transcription Server using AWS Transcription Streams.
 ### Setup (Debian Linux)
 1. clone this repo
 2. install native dependencies (for cairo): `sudo apt-get install libcairo2-dev libjpeg-dev libgif-dev`
-3. install python3: `sudo apt-get install python3.7`
-4. install pip3: `sudo apt-get install python3-pip`
-5. install dependencies: `pip3 install -r requirements.txt`
-6. navigate into build directory: `cd src/build`
-7. build native linux application: `make`
-8. navigate back to source directory: `cd ..`
-9. run python server: `python3.7 server.py`
+3. install opentok dependency: `sudo apt-get install libopentok-dev`
+4. install python3: `sudo apt-get install python3.7`
+5. install pip3: `sudo apt-get install python3-pip`
+6. install dependencies: `pip3 install -r requirements.txt`
+7. clean build directory: `rm -r src/build/*`
+8. navigate into build directory: `cd src/build`
+9. run cmake `CC=clang CXX=clang++ cmake ..`
+10. build native linux application: `make`
+11. navigate back to source directory: `cd ..`
+12. run python server: `python3.7 server.py`
+
+Refer here for more information on compiling: https://github.com/nexmo-se/vonage-custom-audio_renderer
 
 # Using the application
 
