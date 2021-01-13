@@ -1,1 +1,0 @@
-/usr/bin/clang++   -g -std=c++11 -stdlib=libc++   CMakeFiles/vonage-audio-renderer.dir/main.cpp.o CMakeFiles/vonage-audio-renderer.dir/home/admin/opentokSDK/vonage-custom-audio-renderer/common/src/otk_thread.c.o  -o vonage-audio-renderer -lpthread -lSDL2 -lopentok -lc++abi 
