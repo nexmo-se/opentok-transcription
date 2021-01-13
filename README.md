@@ -19,7 +19,7 @@ Transcription Server using AWS Transcription Streams.
 4. install python3: `sudo apt-get install python3.7`
 5. install pip3: `sudo apt-get install python3-pip`
 6. install dependencies: `pip3 install -r requirements.txt`
-7. clean build directory: `rm -r src/build/*`
+7. create empty build directory: `mkdir src/build`
 8. navigate into build directory: `cd src/build`
 9. run cmake `CC=clang CXX=clang++ cmake ..`
 10. build native linux application: `make`
