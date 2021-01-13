@@ -1,17 +1,6 @@
 # Vonage Video Transcription
 Transcription Server using AWS Transcription Streams.
 
-### Python Dependencies
-- flask
-- flask_socketio
-- flask_cors
-- asyncio
-- amazon_transcribe
-- webrtcvad
-- pprint
-- requests
-- uuid
-
 ### Setup (Debian Linux)
 1. clone this repo
 2. install native dependencies (for cairo): `sudo apt-get install libcairo2-dev libjpeg-dev libgif-dev`
