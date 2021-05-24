@@ -15,9 +15,11 @@ RUN apt-get -y install gnupg2 && apt-get -y install wget && echo "deb https://dl
 
 RUN apt-get -y install libcairo2-dev libjpeg-dev libgif-dev
 
-RUN apt-get -y install python3.7 && apt-get -y install python3-pip
+RUN apt-get -y install python3.7 && apt-get -y install python3-pip && pip3 install --upgrade pip
 
-RUN pip3 install -r requirements.txt
+RUN apt-get -y install cloud-init && apt-get install -y python3-distro-info && apt-get -y install iotop && apt-get -y install curl && apt-get -y install libcurl4-openssl-dev libssl-dev && apt-get -y install python-apt && apt-get -y install python3-distutils-extra && apt-get -y install reportbug
+
+RUN python3.7 -m pip install -r requirements.txt
 
 # Create build directory and navigate inside
 RUN mkdir src/build && cd src/build
