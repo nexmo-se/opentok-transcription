@@ -1,5 +1,7 @@
 FROM debian:buster
 
+EXPOSE 5000
+
 # Create the working directory
 RUN mkdir -p /usr/src/app
 
@@ -19,6 +21,6 @@ RUN apt-get -y  install protobuf-compiler
 RUN apt-get -y install python3.7 && apt-get -y install python3-pip && pip3 install --upgrade pip
 RUN python3.7 -m pip install -r requirements.txt
 # Create build directory and navigate inside
-RUN cd src/build && make && cd ..
+RUN cd src/build && make
 
-CMD ["python3.7", "server.py"]
+CMD ["python3.7", "src/server.py"]
