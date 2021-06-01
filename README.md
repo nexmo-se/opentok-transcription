@@ -90,3 +90,17 @@ direction: sent from server to client
 event: transcription,
 data: TRANSCRIPTION_TEXT (STRING),
 ```
+
+## Running with docker
+
+build the docker image running
+
+`docker build --build-arg aws_secret_access_key=<SECRET> --build-arg aws_access_key_id=<KEY> --build-arg aws_region=<REGION> -t opentok-transcribe .`
+
+Make sure to replace <KEY> , <SECRET> and <REGION> with proper aws credentials
+
+
+and then run it with
+
+`docker run -p 5000:5000 -it opentok-transcribe`
+

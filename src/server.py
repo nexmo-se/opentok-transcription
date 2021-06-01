@@ -45,7 +45,7 @@ class MyEventHandler(TranscriptResultStreamHandler):
       return profanity.censor(text)
 
     def sendTranscriptionSocket(self, text):
-      # print(text)
+      print(text)
       censorredText = self.censorText(text)
       socketio.emit('transcription', censorredText, room=self.sessionId)
 
@@ -112,7 +112,7 @@ async def nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled = Fa
   
   # Launch Native Application
   print("Launching native application process")
-  process = Popen(['build/vonage-audio-renderer', path, apiKey, sessionId, token], stdout=myoutput, stderr=myoutput)
+  process = Popen(['src/build/vonage-audio-renderer', path, apiKey, sessionId, token], stdout=myoutput, stderr=myoutput)
   nativeProcesses[sessionId] = process
   print("Process started", sessionId)
 
