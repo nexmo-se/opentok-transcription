@@ -4,6 +4,7 @@ awscrt==0.6.1
 Flask==1.1.2
 Flask-Cors==3.0.9
 Flask-SocketIO==5.0.1
+opentok>=2.10.0
 profanity==1.1
 requests==2.24.0
 requests-aws4auth==0.9

@@ -19,6 +19,7 @@ import uuid
 import time
 import requests
 from profanity import profanity
+from opentok import OpenTok
 
 # This is the in-memory map of all the native processes
 nativeProcesses = {}
@@ -29,8 +30,6 @@ sleepTime = 0.05
 
 profanity.set_censor_characters('*')
 
-
-
 class MyEventHandler(TranscriptResultStreamHandler):
     def setSessionId(self, sessionId):
       self.sessionId = sessionId
@@ -38,16 +37,36 @@ class MyEventHandler(TranscriptResultStreamHandler):
     def setFilterEnabled(self, filterEnabled):
       self.filterEnabled = filterEnabled
 
+    def setOpentokInstance(self, ot):
+      self.opentok = ot
+
     def censorText(self, text):
       if self.filterEnabled is None or not self.filterEnabled:
         return text
 
       return profanity.censor(text)
 
-    def sendTranscriptionSocket(self, text):
+    def generatePayload(self, text):
+      signal = {
+        '_head': {
+          'id': 0,
+          'seq': 0,
+          'tot': 0,
+        },
+        'data': {
+          'text': text
+        }
+      }
+      payload = {
+          'type': 'transcription',  # optional
+          'data': json.dumps(signal)  # required
+      }
+      return payload
+
+    def sendCCbroadcastMsg(self, text):
       print(text)
       censorredText = self.censorText(text)
-      socketio.emit('transcription', censorredText, room=self.sessionId)
+      self.opentok.signal(self.sessionId, self.generatePayload(censorredText))
 
     async def handle_transcript_event(self, transcript_event: TranscriptEvent):
         results = transcript_event.transcript.results
@@ -55,12 +74,7 @@ class MyEventHandler(TranscriptResultStreamHandler):
           result = results[0]
           if len(result.alternatives) > 0:
             alt = result.alternatives[0]
-            self.sendTranscriptionSocket(alt.transcript)
-
-
-
-
-
+            self.sendCCbroadcastMsg(alt.transcript)
 
 async def fifo_stream(fifo):
   # Prepare data chunk
@@ -98,9 +112,11 @@ async def nonstop_write_chunks(stream, fifo):
   await stream.input_stream.end_stream()
   print('Stream ended')
 
-async def nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled = False):
+async def nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled = False):
   myoutput = open("out.log",'w')
-
+  opentok = OpenTok(apiKey, secret)
+  transcriptionServiceToken = opentok.generate_token(sessionId)  # Token for transcription service
+  print(transcriptionServiceToken)
   # Create FIFO
   path = "/tmp/"+''.join(choice(ascii_uppercase) for i in range(12))
   try:
@@ -112,7 +128,7 @@ async def nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled = Fa
   
   # Launch Native Application
   print("Launching native application process")
-  process = Popen(['src/build/vonage-audio-renderer', path, apiKey, sessionId, token], stdout=myoutput, stderr=myoutput)
+  process = Popen(['build/vonage-audio-renderer', path, apiKey, sessionId, transcriptionServiceToken], stdout=myoutput, stderr=myoutput)
   nativeProcesses[sessionId] = process
   print("Process started", sessionId)
 
@@ -125,6 +141,7 @@ async def nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled = Fa
     handler = MyEventHandler(stream.output_stream)
     handler.setSessionId(sessionId)
     handler.setFilterEnabled(filterEnabled)
+    handler.setOpentokInstance(opentok)
 
     print("Starting gather")
     await asyncio.gather(nonstop_write_chunks(stream, fifo), handler.handle_events())
@@ -132,31 +149,10 @@ async def nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled = Fa
   
   print("Thread ended")
 
-
-
-
-
-
-
-
 api = Flask(__name__)
 CORS(api)
 socketio = SocketIO(api, cors_allowed_origins='*', async_mode='threading')
 print(socketio)
-
-
-@socketio.on('join')
-def on_join(data):
-  room = data['room']
-  print('Join Room Requested', room)
-  join_room(room)
-
-@socketio.on('leave')
-def on_leave(data):
-  room = data['room']
-  print('Leave Room Requested', room)
-  leave_room(room)
-
 
 @api.route('/transcribe', methods=['POST'])
 def startTransribe():
@@ -165,12 +161,12 @@ def startTransribe():
   data = request.get_json()
   apiKey = data['apiKey']
   sessionId = data['sessionId']
-  token = data['token']
+  secret = data['secret']
   filterEnabled = data['filterEnabled'] if 'filterEnabled' in data else True
 
   print('API Key:', apiKey)
   print('Session ID:', sessionId)
-  print('Token:', token)
+  print('secret:', secret)
   print('Filter Enabled:', filterEnabled)
 
   if sessionId in nativeProcesses:
@@ -179,7 +175,7 @@ def startTransribe():
     return jsonify({ "status": "started" })
 
   # Start new process
-  thread = threading.Thread(target=asyncio.run, args=(nonstop_stream_transcribe(apiKey, sessionId, token, filterEnabled),))
+  thread = threading.Thread(target=asyncio.run, args=(nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled),))
   thread.start()
   print('Thread started', sessionId)
 
