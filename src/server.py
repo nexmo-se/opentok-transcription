@@ -128,7 +128,7 @@ async def nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled = F
   
   # Launch Native Application
   print("Launching native application process")
-  process = Popen(['build/vonage-audio-renderer', path, apiKey, sessionId, transcriptionServiceToken], stdout=myoutput, stderr=myoutput)
+  process = Popen(['src/build/vonage-audio-renderer', path, apiKey, sessionId, transcriptionServiceToken], stdout=myoutput, stderr=myoutput)
   nativeProcesses[sessionId] = process
   print("Process started", sessionId)
 
