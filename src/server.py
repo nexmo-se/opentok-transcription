@@ -20,13 +20,19 @@ import time
 import requests
 from profanity import profanity
 from opentok import OpenTok
+from overai_speech.asr import OverAiAsr
+import logging
+
+
+TRANSCRIPTION_SERVICE_WS = 'ws://asr-en.dev.ai.vonage.com'  # ASR server endpoint
+CORRECTION_SERVICE_URL = 'https://asr-corrector.dev.ai.vonage.com/api/v1/asr/correct/'  # ASR correction service
 
 # This is the in-memory map of all the native processes
 nativeProcesses = {}
 pythonThreads = {}
 
-chunkSize = 3200
-sleepTime = 0.05
+chunkSize = 32000
+sleepTime = 0.5
 
 profanity.set_censor_characters('*')
 
@@ -46,27 +52,10 @@ class MyEventHandler(TranscriptResultStreamHandler):
 
       return profanity.censor(text)
 
-    def generatePayload(self, text):
-      signal = {
-        '_head': {
-          'id': 0,
-          'seq': 0,
-          'tot': 0,
-        },
-        'data': {
-          'text': text
-        }
-      }
-      payload = {
-          'type': 'transcription',  # optional
-          'data': json.dumps(signal)  # required
-      }
-      return payload
-
     def sendCCbroadcastMsg(self, text):
       print(text)
       censorredText = self.censorText(text)
-      self.opentok.signal(self.sessionId, self.generatePayload(censorredText))
+      self.opentok.send_signal(self.sessionId, self.generatePayload(censorredText))
 
     async def handle_transcript_event(self, transcript_event: TranscriptEvent):
         results = transcript_event.transcript.results
@@ -98,8 +87,26 @@ async def fifo_stream(fifo):
     data = fifo.read(chunkSize)
     #print("after read")
 
-async def nonstop_write_chunks(stream, fifo):
+def generatePayload(text):
+  signal = {
+    '_head': {
+      'id': 0,
+      'seq': 0,
+      'tot': 0,
+    },
+    'data': {
+      'text': text
+    }
+  }
+  payload = {
+      'type': 'transcription',  # optional
+      'data': json.dumps(signal)  # required
+  }
+  return payload
+
+async def nonstop_write_chunks(stream, fifo, sessionId, opentok):
   startTime = int(time.time())
+  asr = OverAiAsr(transcription_service_ws=TRANSCRIPTION_SERVICE_WS)
   print('Start Time:', startTime)
 
   print('Writing Chunks')
@@ -107,7 +114,13 @@ async def nonstop_write_chunks(stream, fifo):
     chunkTime = int(time.time())
     differenceInSeconds = chunkTime - startTime
     #print('Chunk Elapsed Time:', differenceInSeconds)
-    await stream.input_stream.send_audio_event(audio_chunk = chunk)
+    results_generator = asr.transcribe_buffer(chunk)
+    for index, (partial, transcription, raw_transcriptions) in enumerate(results_generator):
+      if transcription:
+        print("transcript")
+        print(transcription)
+        opentok.send_signal(sessionId, generatePayload(transcription))
+    #await stream.input_stream.send_audio_event(audio_chunk = chunk)
   print('Out of chunk loop')
   await stream.input_stream.end_stream()
   print('Stream ended')
@@ -137,14 +150,14 @@ async def nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled = F
 
     # Create Client (can this be single client?)
     client = TranscribeStreamingClient(region = "us-west-2")
-    stream = await client.start_stream_transcription(language_code = "en-US", media_sample_rate_hz = 16000, media_encoding = "pcm")
+    stream = await client.start_stream_transcription(language_code = "en-US", media_sample_rate_hz = 8000, media_encoding = "pcm")
     handler = MyEventHandler(stream.output_stream)
     handler.setSessionId(sessionId)
     handler.setFilterEnabled(filterEnabled)
     handler.setOpentokInstance(opentok)
 
     print("Starting gather")
-    await asyncio.gather(nonstop_write_chunks(stream, fifo), handler.handle_events())
+    await asyncio.gather(nonstop_write_chunks(stream, fifo, sessionId, opentok), handler.handle_events())
     print("Gather ended")
   
   print("Thread ended")
