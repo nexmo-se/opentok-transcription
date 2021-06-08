@@ -85,7 +85,7 @@ static otc_bool audio_device_get_render_settings(const otc_audio_device *audio_d
   }
 
   settings->number_of_channels = 1;
-  settings->sampling_rate = 16000;
+  settings->sampling_rate = 8000;
   return OTC_TRUE;
 }
 
