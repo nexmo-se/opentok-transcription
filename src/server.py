@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from flask import Flask, json, request, jsonify
-from flask_socketio import SocketIO, join_room, leave_room, emit as socketEmit
 from flask_cors import CORS
 import os, sys
 import asyncio
@@ -8,17 +7,13 @@ from threading import Thread
 import threading
 import subprocess
 from subprocess import Popen,PIPE
-from amazon_transcribe.client import TranscribeStreamingClient
-from amazon_transcribe.handlers import TranscriptResultStreamHandler
-from amazon_transcribe.model import TranscriptEvent
-from random import choice
 from string import ascii_uppercase
 import webrtcvad
 from pprint import pprint
+from random import choice
 import uuid
 import time
 import requests
-from profanity import profanity
 from opentok import OpenTok
 from overai_speech.asr import OverAiAsr
 import logging
@@ -32,38 +27,7 @@ nativeProcesses = {}
 pythonThreads = {}
 
 chunkSize = 32000
-sleepTime = 0.5
-
-profanity.set_censor_characters('*')
-
-class MyEventHandler(TranscriptResultStreamHandler):
-    def setSessionId(self, sessionId):
-      self.sessionId = sessionId
-
-    def setFilterEnabled(self, filterEnabled):
-      self.filterEnabled = filterEnabled
-
-    def setOpentokInstance(self, ot):
-      self.opentok = ot
-
-    def censorText(self, text):
-      if self.filterEnabled is None or not self.filterEnabled:
-        return text
-
-      return profanity.censor(text)
-
-    def sendCCbroadcastMsg(self, text):
-      print(text)
-      censorredText = self.censorText(text)
-      self.opentok.send_signal(self.sessionId, self.generatePayload(censorredText))
-
-    async def handle_transcript_event(self, transcript_event: TranscriptEvent):
-        results = transcript_event.transcript.results
-        if len(results) > 0:
-          result = results[0]
-          if len(result.alternatives) > 0:
-            alt = result.alternatives[0]
-            self.sendCCbroadcastMsg(alt.transcript)
+sleepTime = 2
 
 async def fifo_stream(fifo):
   # Prepare data chunk
@@ -104,33 +68,24 @@ def generatePayload(text):
   }
   return payload
 
-async def nonstop_write_chunks(stream, fifo, sessionId, opentok):
-  startTime = int(time.time())
+async def transcribe_chunks(fifo, sessionId, opentok):
   asr = OverAiAsr(transcription_service_ws=TRANSCRIPTION_SERVICE_WS)
-  print('Start Time:', startTime)
-
-  print('Writing Chunks')
   async for chunk in fifo_stream(fifo):
-    chunkTime = int(time.time())
-    differenceInSeconds = chunkTime - startTime
-    #print('Chunk Elapsed Time:', differenceInSeconds)
     results_generator = asr.transcribe_buffer(chunk)
+
     for index, (partial, transcription, raw_transcriptions) in enumerate(results_generator):
+      print(raw_transcriptions)
       if transcription:
-        print("transcript")
-        print(transcription)
         opentok.send_signal(sessionId, generatePayload(transcription))
-    #await stream.input_stream.send_audio_event(audio_chunk = chunk)
-  print('Out of chunk loop')
-  await stream.input_stream.end_stream()
+
   print('Stream ended')
 
-async def nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled = False):
-  myoutput = open("out.log",'w')
+async def launch_native_collect(apiKey, sessionId, secret):
+  sessionOutput = open(sessionId + ".log",'w')
   opentok = OpenTok(apiKey, secret)
   transcriptionServiceToken = opentok.generate_token(sessionId)  # Token for transcription service
-  print(transcriptionServiceToken)
-  # Create FIFO
+
+
   path = "/tmp/"+''.join(choice(ascii_uppercase) for i in range(12))
   try:
     os.mkfifo(path,0o777)
@@ -139,33 +94,17 @@ async def nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled = F
   else:
     print("FIFO Created")
   
-  # Launch Native Application
-  print("Launching native application process")
-  process = Popen(['src/build/vonage-audio-renderer', path, apiKey, sessionId, transcriptionServiceToken], stdout=myoutput, stderr=myoutput)
+  process = Popen(['src/build/vonage-audio-renderer', path, apiKey, sessionId, transcriptionServiceToken], stdout=sessionOutput, stderr=sessionOutput)
   nativeProcesses[sessionId] = process
-  print("Process started", sessionId)
+  print("Started transcribing", sessionId)
 
   with open(path, 'rb') as fifo:
-    print("FIFO Opened")
-
-    # Create Client (can this be single client?)
-    client = TranscribeStreamingClient(region = "us-west-2")
-    stream = await client.start_stream_transcription(language_code = "en-US", media_sample_rate_hz = 8000, media_encoding = "pcm")
-    handler = MyEventHandler(stream.output_stream)
-    handler.setSessionId(sessionId)
-    handler.setFilterEnabled(filterEnabled)
-    handler.setOpentokInstance(opentok)
-
-    print("Starting gather")
-    await asyncio.gather(nonstop_write_chunks(stream, fifo, sessionId, opentok), handler.handle_events())
-    print("Gather ended")
+    await asyncio.gather(transcribe_chunks(fifo, sessionId, opentok))
   
   print("Thread ended")
 
 api = Flask(__name__)
 CORS(api)
-socketio = SocketIO(api, cors_allowed_origins='*', async_mode='threading')
-print(socketio)
 
 @api.route('/transcribe', methods=['POST'])
 def startTransribe():
@@ -175,12 +114,10 @@ def startTransribe():
   apiKey = data['apiKey']
   sessionId = data['sessionId']
   secret = data['secret']
-  filterEnabled = data['filterEnabled'] if 'filterEnabled' in data else True
 
   print('API Key:', apiKey)
   print('Session ID:', sessionId)
   print('secret:', secret)
-  print('Filter Enabled:', filterEnabled)
 
   if sessionId in nativeProcesses:
     # Existed, should not start
@@ -188,7 +125,7 @@ def startTransribe():
     return jsonify({ "status": "started" })
 
   # Start new process
-  thread = threading.Thread(target=asyncio.run, args=(nonstop_stream_transcribe(apiKey, sessionId, secret, filterEnabled),))
+  thread = threading.Thread(target=asyncio.run, args=(launch_native_collect(apiKey, sessionId, secret),))
   thread.start()
   print('Thread started', sessionId)
 
@@ -228,7 +165,6 @@ def getTranscribe(session_id):
 
 if __name__ == '__main__':
   print('Starting Server')
-  socketio.run(api, host='0.0.0.0', port=5000)
+  api.run(host='0.0.0.0', port=5000)
 
 print('done')
-

@@ -23,6 +23,8 @@ RUN apt-get -y install libcurl4-openssl-dev libssl-dev
 RUN apt-get -y install unattended-upgrades
 RUN apt-get -y install protobuf-compiler
 RUN apt-get -y install python3.7 && apt-get -y install python3-pip && pip3 install --upgrade pip
+RUN pip config set global.extra-index-url "https://artifactory.vgcva0.prod.vonagenetworks.net/artifactory/api/pypi/python-local-ai/simple"
+
 RUN python3.7 -m pip install -r requirements.txt
 # Create build directory and navigate inside
 RUN cd src/build && make
@@ -38,4 +40,4 @@ RUN echo "[default]" > ~/.aws/config
 RUN echo "region = $aws_region" >> ~/.aws/config
 RUN echo "output = json" >> ~/.aws/config
 
-CMD ["python3.7", "src/server.py"]
+
