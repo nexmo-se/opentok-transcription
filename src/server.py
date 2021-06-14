@@ -26,8 +26,7 @@ CORRECTION_SERVICE_URL = 'https://asr-corrector.dev.ai.vonage.com/api/v1/asr/cor
 nativeProcesses = {}
 pythonThreads = {}
 
-chunkSize = 32000
-sleepTime = 2
+chunkSize = 128000
 
 async def fifo_stream(fifo):
   # Prepare data chunk
@@ -43,11 +42,6 @@ async def fifo_stream(fifo):
     yield data
     #print("after send")
 
-    if sleepTime > 0:
-      time.sleep(sleepTime)
-    #print("after sleep")
-
-    # Prepare next chunk
     data = fifo.read(chunkSize)
     #print("after read")
 
@@ -71,7 +65,7 @@ def generatePayload(text):
 async def transcribe_chunks(fifo, sessionId, opentok):
   asr = OverAiAsr(transcription_service_ws=TRANSCRIPTION_SERVICE_WS)
   async for chunk in fifo_stream(fifo):
-    results_generator = asr.transcribe_buffer(chunk)
+    results_generator = asr.transcribe_buffer(chunk, chunkSize)
 
     for index, (partial, transcription, raw_transcriptions) in enumerate(results_generator):
       print(raw_transcriptions)
