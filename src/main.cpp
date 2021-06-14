@@ -28,10 +28,10 @@ static otk_thread_func_return_type renderer_thread_start_function(void *arg) {
   }
 
   while (device->renderer_thread_exit.load() == false) {
-  	int16_t samples[160];
+  	int16_t samples[80];
 
         std::cout << "Before Read" << std::endl;
-	size_t actual = otc_audio_device_read_render_data(samples,160);
+	size_t actual = otc_audio_device_read_render_data(samples,80);
 
         std::cout << "Actual " << actual << std::endl;
 	if(actual > 0){
