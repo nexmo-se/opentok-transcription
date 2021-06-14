@@ -95,7 +95,7 @@ data: TRANSCRIPTION_TEXT (STRING),
 
 build the docker image running
 
-`docker build --build-arg aws_secret_access_key=<SECRET> --build-arg aws_access_key_id=<KEY> --build-arg aws_region=<REGION> -t opentok-transcribe .`
+`docker build opentok-transcribe-overai .`
 
 Make sure to replace `<KEY> , <SECRET> and <REGION>` with proper aws credentials
 
