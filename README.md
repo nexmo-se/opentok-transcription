@@ -93,14 +93,13 @@ data: TRANSCRIPTION_TEXT (STRING),
 
 ## Running with docker
 
+Make sure that you are connected to Vonage VPN before running the following steps
+
 build the docker image running
 
 `docker build opentok-transcribe-overai .`
 
-Make sure to replace `<KEY> , <SECRET> and <REGION>` with proper aws credentials
-
-
 and then run it with
 
-`docker run -p 5000:5000 -it opentok-transcribe`
+`docker run -p 5000:5000 -it opentok-transcribe-overai`
 
