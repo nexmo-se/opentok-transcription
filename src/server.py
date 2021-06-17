@@ -53,12 +53,10 @@ class MyEventHandler(TranscriptResultStreamHandler):
     def censorText(self, text):
         if self.filterEnabled is None or not self.filterEnabled:
             return text
-        broadcast_msg = json.loads(text)
-        censored_text = profanity.censor(broadcast_msg['text'])
-        broadcast_msg['text'] = censored_text
-        return json.dumps(broadcast_msg)
+        censored_text = profanity.censor(text)
+        return censored_text
 
-    def generatePayload(self, text):
+    def generatePayload(self, msg):
         signal = {
             '_head': {
                 'id': 0,
@@ -66,7 +64,11 @@ class MyEventHandler(TranscriptResultStreamHandler):
                 'tot': 0,
             },
             'data': {
-                'text': text
+                'text': msg['text'],
+                'ts': msg['ts'],
+                'userName': msg['userName'],
+                'streamId': msg['streamId'],
+                'epoch': int(time.time())
             }
         }
         payload = {
@@ -75,9 +77,9 @@ class MyEventHandler(TranscriptResultStreamHandler):
         }
         return payload
 
-    def sendCCbroadcastMsg(self, text):
-        censorredText = self.censorText(text)
-        self.opentok.signal(self.sessionId, self.generatePayload(censorredText))
+    def sendCCbroadcastMsg(self, msg):
+        msg['text'] = self.censorText(msg['text'])
+        self.opentok.signal(self.sessionId, self.generatePayload(msg))
 
     async def handle_transcript_event(self, transcript_event: TranscriptEvent):
         results = transcript_event.transcript.results
@@ -87,7 +89,7 @@ class MyEventHandler(TranscriptResultStreamHandler):
                 alt = result.alternatives[0]
                 broadcast_msg = {'ts': result.start_time, 'userName': self.userName, 'streamId': self.streamId, 'text': alt.transcript}
                 print(json.dumps(broadcast_msg))
-                self.sendCCbroadcastMsg(json.dumps(broadcast_msg))
+                self.sendCCbroadcastMsg(broadcast_msg)
 
 
 async def fifo_stream(fifo):
