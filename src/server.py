@@ -53,8 +53,10 @@ class MyEventHandler(TranscriptResultStreamHandler):
     def censorText(self, text):
         if self.filterEnabled is None or not self.filterEnabled:
             return text
-
-        return profanity.censor(text)
+        broadcast_msg = json.loads(text)
+        censored_text = profanity.censor(broadcast_msg['text'])
+        broadcast_msg['text'] = censored_text
+        return json.dumps(broadcast_msg)
 
     def generatePayload(self, text):
         signal = {
