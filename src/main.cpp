@@ -7,11 +7,13 @@
 #include <fcntl.h> 
 #include <sys/stat.h> 
 #include <sys/types.h> 
-#include <unistd.h> 
+#include <unistd.h>
+#include <cstring>
 
 #include "otk_thread.h"
 
 static std::atomic<bool> g_is_connected(false);
+char* streamId;
 
 
 struct audio_device {
@@ -139,15 +141,21 @@ static void on_session_stream_received(otc_session *session,
   subscriber_callbacks.on_error = on_subscriber_error;
 
   otc_subscriber *subscriber = otc_subscriber_new(stream,&subscriber_callbacks);
+
+  printf("%s \n",otc_stream_get_id(stream));
+  printf("%s \n",streamId);
+  // subscribe only if matches
   otc_subscriber_set_subscribe_to_video(subscriber,0);
- 
-  if (otc_session_subscribe(session, subscriber) == OTC_SUCCESS) {
-    printf("subscribed successfully\n");
-    return;
-  }
-  else{
-    printf("Error during subscribe\n");
-  }
+if(std::strcmp(otc_stream_get_id(stream),streamId) == 0) {
+   if (otc_session_subscribe(session, subscriber) == OTC_SUCCESS) {
+     printf("subscribed successfully to stream otc_stream_get_id %s \n", streamId);
+     return;
+   }
+   else{
+     printf("Error during subscribe\n");
+   }
+ }
+
 }
 
 static void on_session_stream_dropped(otc_session *session,
@@ -185,10 +193,12 @@ int main(int argc, char** argv) {
   if (argc > 4) {
     std::cout << "API KEY: " << argv[2] << std::endl;
     std::cout << "SESSION ID: " << argv[3] << std::endl;
-    std::cout << "TOKEN: " << argv[4] << std::endl;
+    std::cout << "TOKEN: " << argv[5] << std::endl;
+    std::cout << "Stream ID: " << argv[4] << std::endl;
     apiKey = argv[2];
     sessionId = argv[3];
-    token = argv[4];
+    token = argv[5];
+    streamId = argv[4];
   }
 
   if (otc_init(nullptr) != OTC_SUCCESS) {
