@@ -1,3 +1,5 @@
+Captions are now officially supported by Client SDKs - https://tokbox.com/developer/guides/live-captions/
+This repo is for educational purposes only
 # Vonage Video Transcription
 Transcription Server using AWS Transcription Streams.
 
